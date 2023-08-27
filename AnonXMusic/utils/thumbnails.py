@@ -3,6 +3,8 @@ import re
 
 import aiofiles
 import aiohttp
+import numpy as np
+
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 from unidecode import unidecode
 from youtubesearchpython.__future__ import VideosSearch
@@ -29,9 +31,9 @@ def clear(text):
     return title.strip()
 
 
-async def get_thumb(videoid):
-    if os.path.isfile(f"cache/{videoid}.png"):
-        return f"cache/{videoid}.png"
+async def get_thumb(videoid, user_id):
+    if os.path.isfile(f"cache/{videoid}_{user_id}.png"):
+        return f"cache/{videoid}_{user_id}.png"
 
     url = f"https://www.youtube.com/watch?v={videoid}"
     try:
@@ -64,12 +66,57 @@ async def get_thumb(videoid):
                     await f.write(await resp.read())
                     await f.close()
 
+        try:
+            wxyz = await app.get_profile_photos(user_id)
+            wxy = await app.download_media(wxyz[0]['file_id'], file_name=f'{user_id}.jpg')
+        except:
+            hehe = await app.get_profile_photos(app.id)
+            wxy = await app.download_media(hehe[0]['file_id'], file_name=f'{app.id}.jpg')
+        xy = Image.open(wxy)
+        a = Image.new('L', [640, 640], 0)
+        b = ImageDraw.Draw(a)
+        b.pieslice([(0, 0), (540,540)], 0, 360, fill = 355, outline = "white")
+        c = np.array(xy)
+        d = np.array(a)
+        e = np.dstack((c, d))
+        f = Image.fromarray(e)
+        x = f.resize((250, 250))
+        
+
         youtube = Image.open(f"cache/thumb{videoid}.png")
         image1 = changeImageSize(1280, 720, youtube)
         image2 = image1.convert("RGBA")
         background = image2.filter(filter=ImageFilter.BoxBlur(10))
         enhancer = ImageEnhance.Brightness(background)
         background = enhancer.enhance(0.5)
+
+        image3 = changeImageSize(1280, 720, bg)
+        image5 = image3.convert("RGBA")
+        Image.alpha_composite(background, image5).save(f"cache/temp{videoid}.png")
+
+        Xcenter = youtube.width / 2
+        Ycenter = youtube.height / 2
+        x1 = Xcenter - 250
+        y1 = Ycenter - 250
+        x2 = Xcenter + 250
+        y2 = Ycenter + 250
+        logo = youtube.crop((x1, y1, x2, y2))
+        logo.thumbnail((520, 520), Image.LANCZOS)
+        logo.save(f"cache/chop{videoid}.png")
+        if not os.path.isfile(f"cache/cropped{videoid}.png"):
+            im = Image.open(f"cache/chop{videoid}.png").convert("RGBA")
+            add_corners(im)
+            im.save(f"cache/cropped{videoid}.png")
+
+        crop_img = Image.open(f"cache/cropped{videoid}.png")
+        logo = crop_img.convert("RGBA")
+        logo.thumbnail((365, 365), Image.LANCZOS)
+        width = int((1280 - 365) / 2)
+        background = Image.open(f"cache/temp{videoid}.png")
+        background.paste(logo, (width + 2, 138), mask=logo)
+        background.paste(x, (1020, 220), mask=x)
+        background.paste(image3, (0, 0), mask=image3)
+
         draw = ImageDraw.Draw(background)
         arial = ImageFont.truetype("AnonXMusic/assets/font2.ttf", 30)
         font = ImageFont.truetype("AnonXMusic/assets/font.ttf", 30)
